@@ -97,7 +97,63 @@ def printComponents(outputfile,components_number,listOfComponents):
         s=sky[-i]+s
         sky=s+sky.replace(s,"")
         outputfile.write(" - "+sky+";" +'\n')
-    outputfile.write("END COMPONENTS")
+    outputfile.write("END COMPONENTS" +'\n')
+
+
+def getWiresList(verilog_file_name):
+    listOfNets=[]
+    inputfile=open(verilog_file_name,"r")
+    for line in inputfile:
+        if (line.find("wire") != -1) or (line.find("input") != -1) or (line.find("output") != -1):
+            wire_name=line.split()
+            if(wire_name[1][0]=="["):
+                z=1
+                i=0
+                while(wire_name[1][z]!=":"):
+                    i=int(str(i)+wire_name[1][z])
+                    z+=1
+                while(i>=0):
+                    name=wire_name[2]+"["+str(i)+"]"
+                    listOfNets.append(name.replace(";",""))
+                    i-=1
+            else:
+                wire_name[1]=wire_name[1].replace("\\","")
+                listOfNets.append(wire_name[1].replace(";",""))
+
+    inputfile.close()
+    return listOfNets
+
+def printNet(verilog_file_name,outputfile,wires_number,listOfWires):
+    outputfile.write("Nets " + str(wires_number) + "; \n")
+    for wire in listOfWires :
+        outputfile.write(" - " + wire)
+        inputfile=open(verilog_file_name,"r")
+        for line in inputfile:
+            if(line.find("sky")!=-1):
+                sky=line
+                for line2 in inputfile:
+                    if(line2.find(str(wire))!=-1):
+                        sky=sky.partition("(")[0]
+                        sky =sky.replace(" ","")
+                        s=sky[-1]
+                        i=2
+                        while(sky[-i]!='_'):
+                            s=sky[-i]+s
+                            i+=1
+                        s=sky[-i]+s
+                        z=1
+                        word=""
+                        line2=line2.partition("(")[0]
+                        while(line2[-z]!="."):
+                            print(line2[-z])
+                            word=line2[-z]+word
+                            z+=1
+                        outputfile.write("(" +s+word.replace(" ","")+") ")
+                        break
+                    if(line2.find(";")!=-1):
+                        break
+        outputfile.write(" + USE SIGNAL ; \n")
+        inputfile.close()
 
 
 
@@ -111,7 +167,7 @@ def main():
    core_utilization=float(input("Please Enter the core area utilization percentage \n"))
    aspect_ratio=float(input("Please Enter the aspect ratio \n"))
    h_margin=2*float(input("Please Enter the vertical margin \n"))
-   w_margin=2*float(input("Please Enter the horizonal margin \n"))
+   w_margin=2*float(input("Please Enter the horizantal margin \n"))
 
   
 
@@ -119,6 +175,9 @@ def main():
    outputfile= open(outputfile_name,'w+')
    listOfComponents=countlistOfComponents(verilog_file_name)
    components_number=len(listOfComponents)
+   listOfWires=getWiresList(verilog_file_name)
+   wires_number=len(listOfWires)
+
 
    cells_area=calculate_cell_area(listOfComponents,LEF_file_name)
    core_area =cells_area/core_utilization
@@ -134,6 +193,10 @@ def main():
 
    printROW(outputfile,die_area_height,die_area_width ,w_margin ,h_margin)
    printComponents(outputfile,components_number,listOfComponents)
+   printNet(verilog_file_name,outputfile,wires_number,listOfWires)
+  
+
+   outputfile.write("END DESIGN"+'\n')
    
 
 
